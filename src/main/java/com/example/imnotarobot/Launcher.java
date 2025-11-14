@@ -1,10 +1,12 @@
 package com.example.imnotarobot;
 
+import atlantafx.base.theme.PrimerDark;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.Dialog;
@@ -15,12 +17,12 @@ import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -30,10 +32,9 @@ import java.io.IOException;
 public class Launcher extends Application {
     Image originalImage;
     BufferedImage modifiedImage;
-
     MenuItem saveImageItem;
-
-
+    ScrollPane imageArea;
+    StackPane imageAreaWrap;
     ToggleGroup shownImageGroup;
     RadioButton showOriginalImage;
     RadioButton showModifiedImage;
@@ -41,12 +42,16 @@ public class Launcher extends Application {
     Stage stage;
     Menu filterMenu;
 
+
     @Override
     public void start(Stage stage) {
         imageViewer = new ImageView();
         imageViewer.setPreserveRatio(true);
+        imageViewer.setSmooth(true);
 
-        // Here be menu bar
+        // Adding group make ScrollPane work with scale
+        Group yetAnotherWrapper = new Group(imageViewer);
+
         MenuBar menuBar = new MenuBar();
 
         // Menus
@@ -77,6 +82,11 @@ public class Launcher extends Application {
         aboutItem.setOnAction(e -> showAboutWindow());
         aboutMenu.getItems().add(aboutItem);
 
+        // Exit menu
+        MenuItem exitItem = new MenuItem("Exit");
+        exitItem.setOnAction(e -> Platform.exit());
+        exitMenu.getItems().add(exitItem);
+
         // Sidebar fill
         shownImageGroup = new ToggleGroup();
 
@@ -90,34 +100,38 @@ public class Launcher extends Application {
         showModifiedImage.setDisable(true);
         showModifiedImage.setOnAction(e -> showModifiedImage());
 
-        // Exit menu
-        MenuItem exitItem = new MenuItem("Exit");
-        exitItem.setOnAction(e -> Platform.exit());
-        exitMenu.getItems().add(exitItem);
+        // Wrapper for Image Viewer to keep image at the center
+        imageAreaWrap = new StackPane(yetAnotherWrapper);
+        imageAreaWrap.setAlignment(Pos.CENTER);
 
+        // Screen Components Manifest
         BorderPane root = new BorderPane();
-        // Wrapper helps center the picture, otherwise it is always in the top left corner
-        StackPane imageAreaWrapper = new StackPane(imageViewer);
-        ScrollPane imageArea = new ScrollPane(imageAreaWrapper);
+        imageArea = new ScrollPane(imageAreaWrap);
         VBox sideBar = new VBox();
 
-        // Visual edit for sidebar
-        sideBar.setAlignment(Pos.CENTER);
-        sideBar.setPadding(new Insets(10));
+        // Visual edit for root
+        root.setMinSize(800, 600);
 
-        // Visual edit for image area
+        // Visual edit for imageArea
         imageArea.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         imageArea.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         imageArea.setFitToWidth(true);
         imageArea.setFitToHeight(true);
         imageArea.setPannable(true);
 
-        // Visual edit for root
-        root.setMinSize(800, 600);
+        imageArea.addEventFilter(ScrollEvent.SCROLL, e -> {
+            if (e.isControlDown()) {
+                e.consume();
+                zoom(e.getDeltaY());
+            }
+        });
+
+        // Visual edit for sideBar
+        sideBar.setAlignment(Pos.CENTER);
+        sideBar.setPadding(new Insets(10));
 
         // Fill the Screen!
         menuBar.getMenus().addAll(fileMenu, filterMenu, aboutMenu, exitMenu);
-        // sideBar.getChildren().addAll(selectImageButton, editMatrixButton);
         sideBar.getChildren().addAll(showOriginalImage, showModifiedImage);
 
         // Set the hierarchy
@@ -127,6 +141,9 @@ public class Launcher extends Application {
 
         // Some scene BS
         Scene scene = new Scene(root, 800, 600);
+
+        // Dark Mode... Light Mode may be implemented in future
+        Application.setUserAgentStylesheet(new PrimerDark().getUserAgentStylesheet());
 
         stage.setTitle("clanker painter 2.0");
         stage.setScene(scene);
@@ -219,6 +236,14 @@ public class Launcher extends Application {
 
     private void showOriginalImage() {
         imageViewer.setImage(originalImage);
+    }
+
+    private void zoom(double direction) {
+        double scale_factor = (direction > 0) ? 1.1 : 0.9;
+
+        imageViewer.setScaleX(imageViewer.getScaleX()*scale_factor);
+        imageViewer.setScaleY(imageViewer.getScaleY()*scale_factor);
+        imageViewer.setScaleZ(imageViewer.getScaleZ()*scale_factor);
     }
 
     public static void main(String[] args) {

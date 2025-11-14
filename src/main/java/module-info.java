@@ -4,6 +4,7 @@ module com.example.imnotarobot {
     requires javafx.graphics;
     requires java.desktop;
     requires javafx.swing;
+    requires atlantafx.base;
 
 
     opens com.example.imnotarobot to javafx.fxml;
