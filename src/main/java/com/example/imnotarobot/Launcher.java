@@ -28,6 +28,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 
 public class Launcher extends Application {
     Image originalImage;
@@ -71,16 +72,24 @@ public class Launcher extends Application {
         fileMenu.getItems().addAll(loadImageItem, saveImageItem);
 
         // Filter menu WIP
+        Filters filters = new Filters();
+
         MenuItem grayscaleFilter = new MenuItem("Grayscale Filter");
-        grayscaleFilter.setOnAction(e -> grayscaleFilter(modifiedImage));
+        grayscaleFilter.setOnAction(e -> {
+            modifiedImage = filters.grayscaleFilter(modifiedImage);
+            showModifiedImage.setSelected(true);
+            showModifiedImage();
+        });
 
         filterMenu.getItems().addAll(grayscaleFilter);
         filterMenu.setDisable(true);
 
         // About menu
-        MenuItem aboutItem = new MenuItem("About");
-        aboutItem.setOnAction(e -> showAboutWindow());
-        aboutMenu.getItems().add(aboutItem);
+        //MenuItem aboutItem = new MenuItem("About");
+        aboutMenu.setOnAction(e -> {
+            showAboutWindow();
+        });
+        //aboutMenu.getItems().add(aboutItem);
 
         // Exit menu
         MenuItem exitItem = new MenuItem("Exit");
@@ -90,6 +99,7 @@ public class Launcher extends Application {
         // Sidebar fill
         shownImageGroup = new ToggleGroup();
 
+        // Modified / Original
         showOriginalImage = new RadioButton("Original Image");
         showOriginalImage.setToggleGroup(shownImageGroup);
         showOriginalImage.setDisable(true);
@@ -196,22 +206,9 @@ public class Launcher extends Application {
         }
     }
 
-    // Here be filters
-    private void grayscaleFilter(BufferedImage image) {
-        BufferedImage grayscaleImage = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_BYTE_GRAY);
+    private Color pick_color() {
 
-        for (int y = 0; y < image.getHeight(); y++) {
-            for (int x = 0; x < image.getWidth(); x++) {
-                Color color = new Color(image.getRGB(x, y));
-                int grayValue = (int) (0.299 * color.getRed() + 0.587 * color.getGreen() + 0.114 * color.getBlue());
-                Color grayColor = new Color(grayValue, grayValue, grayValue);
-
-                grayscaleImage.setRGB(x, y, grayColor.getRGB());
-            }
-        }
-        modifiedImage = grayscaleImage;
-        showModifiedImage.setSelected(true);
-        showModifiedImage();
+        return Color.blue;
     }
 
     private void showAboutWindow() {
