@@ -1,6 +1,7 @@
 package com.example.imnotarobot;
 
 import atlantafx.base.theme.PrimerDark;
+import atlantafx.base.theme.PrimerLight;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.embed.swing.SwingFXUtils;
@@ -9,6 +10,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.control.Button;
 import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
@@ -18,9 +20,7 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.ScrollEvent;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javax.imageio.ImageIO;
@@ -28,9 +28,9 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
 
 public class Launcher extends Application {
+    boolean isDark;
     Image originalImage;
     BufferedImage modifiedImage;
     MenuItem saveImageItem;
@@ -42,18 +42,37 @@ public class Launcher extends Application {
     ImageView imageViewer;
     Stage stage;
     Menu filterMenu;
+    Image darkModeIcon = new Image(getClass().getResourceAsStream("darkmode.png"));
+    Image lightModeIcon = new Image(getClass().getResourceAsStream("lightmode.png"));
+    ImageView guiStyleIcon;
 
 
     @Override
     public void start(Stage stage) {
+        isDark = true;
+
         imageViewer = new ImageView();
         imageViewer.setPreserveRatio(true);
         imageViewer.setSmooth(true);
+
+
+        guiStyleIcon = new ImageView(darkModeIcon);
+        guiStyleIcon.setFitWidth(26);
+        guiStyleIcon.setFitHeight(26);
+        guiStyleIcon.setPreserveRatio(true);
 
         // Adding group make ScrollPane work with scale
         Group yetAnotherWrapper = new Group(imageViewer);
 
         MenuBar menuBar = new MenuBar();
+
+        Button guiStyle = new Button();
+        guiStyle.setGraphic(guiStyleIcon);
+        guiStyle.setOnAction(e -> {
+            toggleDarkMode();
+        });
+
+        HBox menuWrap = new HBox();
 
         // Menus
         Menu fileMenu = new Menu("File");
@@ -81,15 +100,29 @@ public class Launcher extends Application {
             showModifiedImage();
         });
 
-        filterMenu.getItems().addAll(grayscaleFilter);
+        MenuItem invertColors = new MenuItem("Invert colors");
+        invertColors.setOnAction(e -> {
+            modifiedImage = filters.invertColors(modifiedImage);
+            showModifiedImage.setSelected(true);
+            showModifiedImage();
+        });
+
+        MenuItem pixelSort = new MenuItem("sort pixels");
+        pixelSort.setOnAction(e -> {
+            modifiedImage = filters.pixelSort(modifiedImage);
+            showModifiedImage.setSelected(true);
+            showModifiedImage();
+        });
+
+        filterMenu.getItems().addAll(grayscaleFilter, invertColors, pixelSort);
         filterMenu.setDisable(true);
 
         // About menu
-        //MenuItem aboutItem = new MenuItem("About");
-        aboutMenu.setOnAction(e -> {
+        MenuItem aboutItem = new MenuItem("About");
+        aboutItem.setOnAction(e -> {
             showAboutWindow();
         });
-        //aboutMenu.getItems().add(aboutItem);
+        aboutMenu.getItems().add(aboutItem);
 
         // Exit menu
         MenuItem exitItem = new MenuItem("Exit");
@@ -142,10 +175,12 @@ public class Launcher extends Application {
 
         // Fill the Screen!
         menuBar.getMenus().addAll(fileMenu, filterMenu, aboutMenu, exitMenu);
+        menuWrap.getChildren().addAll(menuBar, guiStyle);
+        HBox.setHgrow(menuBar, Priority.ALWAYS);
         sideBar.getChildren().addAll(showOriginalImage, showModifiedImage);
 
         // Set the hierarchy
-        root.setTop(menuBar);
+        root.setTop(menuWrap);
         root.setCenter(imageArea);
         root.setRight(sideBar);
 
@@ -168,7 +203,8 @@ public class Launcher extends Application {
                 new FileChooser.ExtensionFilter("Obrázky", "*.png", "*.jpg", "*.jpeg", "*.bmp")
         );
 
-        File file = fileChooser.showOpenDialog(null);
+        //File file = fileChooser.showOpenDialog(null);
+        File file = new File("/home/LukSonyX/Desktop/mnam.png");
         if (file != null) {
             try {
                 showOriginalImage.setDisable(false);
@@ -204,6 +240,20 @@ public class Launcher extends Application {
                 e.printStackTrace();
             }
         }
+    }
+
+    private void toggleDarkMode() {
+        if (isDark) {
+            isDark = false;
+            guiStyleIcon.setImage(lightModeIcon);
+            Application.setUserAgentStylesheet(new PrimerLight().getUserAgentStylesheet());
+        }
+        else {
+            isDark = true;
+            guiStyleIcon.setImage(darkModeIcon);
+            Application.setUserAgentStylesheet(new PrimerDark().getUserAgentStylesheet());
+        }
+
     }
 
     private Color pick_color() {
@@ -242,8 +292,9 @@ public class Launcher extends Application {
         imageViewer.setScaleY(imageViewer.getScaleY()*scale_factor);
         imageViewer.setScaleZ(imageViewer.getScaleZ()*scale_factor);
     }
-
-    public static void main(String[] args) {
+/*
+    publ ic static void main(String[] args) {
         launch(args);
     }
+*/
 }
