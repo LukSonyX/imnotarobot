@@ -204,7 +204,7 @@ public class Launcher extends Application {
         );
 
         //File file = fileChooser.showOpenDialog(null);
-        File file = new File("/home/LukSonyX/Desktop/mnam.png");
+        File file = new File("/home/zvonilka/Pictures/wallpapers/pixel.png");
         if (file != null) {
             try {
                 showOriginalImage.setDisable(false);

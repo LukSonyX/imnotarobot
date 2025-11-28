@@ -43,11 +43,12 @@ public class Filters {
     protected BufferedImage pixelSort(BufferedImage image) {
         BufferedImage sortedImage = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_RGB);
         List<YUV> pixels = new ArrayList<>();
-        YUV pixel = new YUV();
 
         for (int y = 0; y < image.getHeight(); y++) {
             for (int x = 0; x < image.getWidth(); x++) {
                 Color color = new Color(image.getRGB(x, y));
+                YUV pixel = new YUV();
+
                 pixel.y =  0.299 * color.getRed() + 0.587 * color.getGreen() + 0.114 * color.getBlue();
                 pixel.u = 0.493 * (color.getBlue() - pixel.y);
                 pixel.v = 0.877 * (color.getRed() - pixel.y);
@@ -56,14 +57,24 @@ public class Filters {
         }
 
 
-        pixels.sort(Comparator.comparingDouble(yuv -> (yuv.y + yuv.u + yuv.v)));
+        pixels.sort(Comparator.comparingDouble(yuv -> yuv.v));
+
 
         int index = 0;
         for (int x = 0; x < sortedImage.getWidth(); x++) {
             for (int y = 0; y < sortedImage.getHeight(); y++) {
-                Color color = new Color(image.getRGB(x, y));
-                color = Color(pixels[index].y + 1.402 (pixels[index].u -128), Y - 0.34414 (pixels[index].u - 128) - 0.71414 (pixels[index].v - 128), pixels[index].y + 1.772 (pidels[index].u-128));
-                sortedImage.setRGB(x, y, color.getRGB());
+
+                double r = pixels.get(index).y + 1.140 * pixels.get(index).v;
+                double g = pixels.get(index).y - 0.395 * pixels.get(index).u - 0.581 * pixels.get(index).v;
+                double b = pixels.get(index).y + 2.032 * pixels.get(index).u;
+
+                int rI = Math.max(0, Math.min(255, (int)r));
+                int gI = Math.max(0, Math.min(255, (int)g));
+                int bI = Math.max(0, Math.min(255, (int)b));
+
+                int rgb = (rI << 16) | (gI << 8) | bI;
+
+                sortedImage.setRGB(x, y, rgb);
                 index++;
             }
         }
