@@ -7,294 +7,290 @@ import javafx.application.Platform;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.control.Button;
-import javafx.scene.control.Dialog;
-import javafx.scene.control.Label;
-import javafx.scene.control.Menu;
-import javafx.scene.control.MenuBar;
-import javafx.scene.control.MenuItem;
-import javafx.scene.control.ScrollPane;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.*;
+import javafx.scene.input.ScrollEvent;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javax.imageio.ImageIO;
-import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.Stack;
+
 
 public class Launcher extends Application {
-    boolean isDark;
-    Image originalImage;
-    BufferedImage modifiedImage;
-    MenuItem saveImageItem;
-    ScrollPane imageArea;
-    StackPane imageAreaWrap;
-    ToggleGroup shownImageGroup;
-    RadioButton showOriginalImage;
-    RadioButton showModifiedImage;
-    ImageView imageViewer;
-    Stage stage;
-    Menu filterMenu;
-    Image darkModeIcon = new Image(getClass().getResourceAsStream("darkmode.png"));
-    Image lightModeIcon = new Image(getClass().getResourceAsStream("lightmode.png"));
-    ImageView guiStyleIcon;
 
+    private boolean isDark = true;
+    private ImageView imageViewer = new ImageView();
+    private Image originalImage;
+    private BufferedImage modifiedImage;
+    private Stage stage;
+
+    private MenuItem saveImageItem;
+    private Menu filterMenu;
+    private RadioButton showOriginalImage;
+    private RadioButton showModifiedImage;
+    private ImageView guiStyleIcon;
+
+    private final Image darkIcon = new Image(getClass().getResourceAsStream("darkmode.png"));
+    private final Image lightIcon = new Image(getClass().getResourceAsStream("lightmode.png"));
 
     @Override
     public void start(Stage stage) {
-        isDark = true;
+        this.stage = stage;
 
-        imageViewer = new ImageView();
-        imageViewer.setPreserveRatio(true);
-        imageViewer.setSmooth(true);
+        setupImageView();
+        guiStyleIcon = makeIconButton();
 
+        MenuBar menuBar = buildMenuBar();
+        VBox sideBar = buildSidebar();
 
-        guiStyleIcon = new ImageView(darkModeIcon);
-        guiStyleIcon.setFitWidth(26);
-        guiStyleIcon.setFitHeight(26);
-        guiStyleIcon.setPreserveRatio(true);
+        ScrollPane imageScrollArea = buildImageScrollPane();
 
-        // Adding group make ScrollPane work with scale
-        Group yetAnotherWrapper = new Group(imageViewer);
-
-        MenuBar menuBar = new MenuBar();
-
-        Button guiStyle = new Button();
-        guiStyle.setGraphic(guiStyleIcon);
-        guiStyle.setOnAction(e -> {
-            toggleDarkMode();
-        });
-
-        HBox menuWrap = new HBox();
-
-        // Menus
-        Menu fileMenu = new Menu("File");
-        filterMenu = new Menu("Filters");
-        Menu aboutMenu = new Menu("About");
-        Menu exitMenu = new Menu("Exit");
-
-        // File menu items
-        MenuItem loadImageItem = new MenuItem("Load Image");
-        loadImageItem.setOnAction(e -> onOpenImage(imageViewer));
-
-        saveImageItem = new MenuItem("Save Image");
-        saveImageItem.setOnAction(e -> onSaveImage());
-        saveImageItem.setDisable(true);
-
-        fileMenu.getItems().addAll(loadImageItem, saveImageItem);
-
-        // Filter menu WIP
-        Filters filters = new Filters();
-
-        MenuItem grayscaleFilter = new MenuItem("Grayscale Filter");
-        grayscaleFilter.setOnAction(e -> {
-            modifiedImage = filters.grayscaleFilter(modifiedImage);
-            showModifiedImage.setSelected(true);
-            showModifiedImage();
-        });
-
-        MenuItem invertColors = new MenuItem("Invert colors");
-        invertColors.setOnAction(e -> {
-            modifiedImage = filters.invertColors(modifiedImage);
-            showModifiedImage.setSelected(true);
-            showModifiedImage();
-        });
-
-        MenuItem pixelSort = new MenuItem("sort pixels");
-        pixelSort.setOnAction(e -> {
-            modifiedImage = filters.pixelSort(modifiedImage);
-            showModifiedImage.setSelected(true);
-            showModifiedImage();
-        });
-
-        filterMenu.getItems().addAll(grayscaleFilter, invertColors, pixelSort);
-        filterMenu.setDisable(true);
-
-        // About menu
-        MenuItem aboutItem = new MenuItem("About");
-        aboutItem.setOnAction(e -> {
-            showAboutWindow();
-        });
-        aboutMenu.getItems().add(aboutItem);
-
-        // Exit menu
-        MenuItem exitItem = new MenuItem("Exit");
-        exitItem.setOnAction(e -> Platform.exit());
-        exitMenu.getItems().add(exitItem);
-
-        // Sidebar fill
-        shownImageGroup = new ToggleGroup();
-
-        // Modified / Original
-        showOriginalImage = new RadioButton("Original Image");
-        showOriginalImage.setToggleGroup(shownImageGroup);
-        showOriginalImage.setDisable(true);
-        showOriginalImage.setOnAction(e -> showOriginalImage());
-
-        showModifiedImage = new RadioButton("Modified Image");
-        showModifiedImage.setToggleGroup(shownImageGroup);
-        showModifiedImage.setDisable(true);
-        showModifiedImage.setOnAction(e -> showModifiedImage());
-
-        // Wrapper for Image Viewer to keep image at the center
-        imageAreaWrap = new StackPane(yetAnotherWrapper);
-        imageAreaWrap.setAlignment(Pos.CENTER);
-
-        // Screen Components Manifest
         BorderPane root = new BorderPane();
-        imageArea = new ScrollPane(imageAreaWrap);
-        VBox sideBar = new VBox();
-
-        // Visual edit for root
-        root.setMinSize(800, 600);
-
-        // Visual edit for imageArea
-        imageArea.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        imageArea.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        imageArea.setFitToWidth(true);
-        imageArea.setFitToHeight(true);
-        imageArea.setPannable(true);
-
-        imageArea.addEventFilter(ScrollEvent.SCROLL, e -> {
-            if (e.isControlDown()) {
-                e.consume();
-                zoom(e.getDeltaY());
-            }
-        });
-
-        // Visual edit for sideBar
-        sideBar.setAlignment(Pos.CENTER);
-        sideBar.setPadding(new Insets(10));
-
-        // Fill the Screen!
-        menuBar.getMenus().addAll(fileMenu, filterMenu, aboutMenu, exitMenu);
-        menuWrap.getChildren().addAll(menuBar, guiStyle);
+        HBox menuWrap = new HBox(menuBar, makeDarkModeToggleButton());
         HBox.setHgrow(menuBar, Priority.ALWAYS);
-        sideBar.getChildren().addAll(showOriginalImage, showModifiedImage);
 
-        // Set the hierarchy
         root.setTop(menuWrap);
-        root.setCenter(imageArea);
+        root.setCenter(imageScrollArea);
         root.setRight(sideBar);
 
-        // Some scene BS
         Scene scene = new Scene(root, 800, 600);
-
-        // Dark Mode... Light Mode may be implemented in future
         Application.setUserAgentStylesheet(new PrimerDark().getUserAgentStylesheet());
 
-        stage.setTitle("clanker painter 2.0");
+        stage.setTitle("Clanker Painter 2.0");
         stage.setScene(scene);
         stage.show();
     }
 
-    // Does what it says...
-    private void onOpenImage(ImageView imageViewer) {
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Vyber obrázek");
-        fileChooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("Obrázky", "*.png", "*.jpg", "*.jpeg", "*.bmp")
+    private void setupImageView() {
+        imageViewer.setPreserveRatio(true);
+        imageViewer.setSmooth(true);
+    }
+
+    private MenuBar buildMenuBar() {
+        MenuBar menuBar = new MenuBar();
+
+        Menu file = new Menu("File");
+        file.getItems().addAll(makeLoadItem(), makeSaveItem());
+
+        filterMenu = makeFilterMenu();
+        filterMenu.setDisable(true);
+
+        Menu about = new Menu("About", null, makeAboutItem());
+        Menu exit = new Menu("Exit", null, makeExitItem());
+
+        menuBar.getMenus().addAll(file, filterMenu, about, exit);
+        return menuBar;
+    }
+
+    private VBox buildSidebar() {
+        ToggleGroup viewGroup = new ToggleGroup();
+
+        showOriginalImage = new RadioButton("Original Image");
+        showOriginalImage.setToggleGroup(viewGroup);
+        showOriginalImage.setDisable(true);
+        showOriginalImage.setOnAction(e -> imageViewer.setImage(originalImage));
+
+        showModifiedImage = new RadioButton("Modified Image");
+        showModifiedImage.setToggleGroup(viewGroup);
+        showModifiedImage.setDisable(true);
+        showModifiedImage.setOnAction(e -> showModified());
+
+        VBox box = new VBox(10, showOriginalImage, showModifiedImage);
+        box.setAlignment(Pos.CENTER);
+        box.setPadding(new Insets(10));
+        return box;
+    }
+
+    private ScrollPane buildImageScrollPane() {
+        StackPane imageWrapper = new StackPane(imageViewer);
+        imageWrapper.setAlignment(Pos.CENTER);
+
+        ScrollPane scrollPane = new ScrollPane(imageWrapper);
+        scrollPane.setPannable(true);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setFitToHeight(true);
+
+        scrollPane.addEventFilter(ScrollEvent.SCROLL, e -> {
+            if (e.isControlDown()) {
+                e.consume();
+                zoom(scrollPane, imageWrapper, e.getX(), e.getY(), e.getDeltaY());
+            }
+        });
+
+        return scrollPane;
+    }
+
+
+    private ImageView makeIconButton() {
+        ImageView iv = new ImageView(darkIcon);
+        iv.setFitWidth(26);
+        iv.setFitHeight(26);
+        return iv;
+    }
+
+    private Button makeDarkModeToggleButton() {
+        Button btn = new Button();
+        btn.setGraphic(guiStyleIcon);
+        btn.setOnAction(e -> toggleDarkMode());
+        return btn;
+    }
+
+    private MenuItem makeLoadItem() {
+        MenuItem item = new MenuItem("Load Image");
+        item.setOnAction(e -> loadImage());
+        return item;
+    }
+
+    private MenuItem makeSaveItem() {
+        saveImageItem = new MenuItem("Save Image");
+        saveImageItem.setDisable(true);
+        saveImageItem.setOnAction(e -> saveImage());
+        return saveImageItem;
+    }
+
+    private MenuItem makeAboutItem() {
+        MenuItem item = new MenuItem("About");
+        item.setOnAction(e -> showAboutWindow());
+        return item;
+    }
+
+    private MenuItem makeExitItem() {
+        MenuItem item = new MenuItem("Exit");
+        item.setOnAction(e -> Platform.exit());
+        return item;
+    }
+
+    private Menu makeFilterMenu() {
+        Menu filters = new Menu("Filters");
+
+        filters.getItems().addAll(
+                makeFilter("Grayscale", () -> apply(Filters::grayscale)),
+                makeFilter("Invert", () -> apply(Filters::invert)),
+                makeFilter("Brightness", () -> apply(img -> Filters.brightness(img, 150))),
+                makeFilter("Contrast", () -> apply(img -> Filters.contrast(img, 1.2f))),
+                makeFilter("Threshold", () -> apply(img -> Filters.threshold(img, 12))),
+                makeFilter("Blur", () -> apply(img -> Filters.boxBlur(img, 12))),
+                makeFilter("Sharpen", () -> apply(Filters::sharpen)),
+                makeFilter("Edge Detect", () -> apply(Filters::edgeDetect)),
+                makeFilter("Pixelate", () -> apply(img -> Filters.pixelate(img, 20)))
+        );
+        return filters;
+    }
+
+    private MenuItem makeFilter(String name, Runnable action) {
+        MenuItem item = new MenuItem(name);
+        item.setOnAction(e -> action.run());
+        return item;
+    }
+
+    private void loadImage() {
+        FileChooser fc = new FileChooser();
+        fc.setTitle("Choose Image");
+        fc.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("Images", "*.png", "*.jpg", "*.jpeg", "*.bmp")
         );
 
-        //File file = fileChooser.showOpenDialog(null);
-        File file = new File("/home/zvonilka/Pictures/wallpapers/pixel.png");
-        if (file != null) {
-            try {
-                showOriginalImage.setDisable(false);
-                showOriginalImage.setSelected(true);
-                showModifiedImage.setDisable(false);
-                saveImageItem.setDisable(false);
-                filterMenu.setDisable(false);
+        File file = fc.showOpenDialog(stage);
+        if (file == null) return;
 
-                modifiedImage = ImageIO.read(file);
-                originalImage = new Image(file.toURI().toString());
-                imageViewer.setImage(originalImage);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+        try {
+            originalImage = new Image(file.toURI().toString());
+            modifiedImage = ImageIO.read(file);
+
+            imageViewer.setImage(originalImage);
+
+            showOriginalImage.setDisable(false);
+            showModifiedImage.setDisable(false);
+            showOriginalImage.setSelected(true);
+
+            saveImageItem.setDisable(false);
+            filterMenu.setDisable(false);
+
+        } catch (IOException ex) {
+            ex.printStackTrace();
         }
     }
 
-    private void onSaveImage() {
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Uložit obrázek");
-        fileChooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("Obrázek", "*.png", "*.jpg", "*.jpeg", "*.bmp")
-        );
-        fileChooser.setInitialFileName("image.png");
+    private void saveImage() {
+        FileChooser fc = new FileChooser();
+        fc.setTitle("Save Image");
+        fc.setInitialFileName("image.png");
 
-        File file = fileChooser.showSaveDialog(stage);
-        if (file != null) {
-            String fileName = file.getName().toLowerCase();
-            String format = fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") ? "jpg" : "png";
-            try {
-                ImageIO.write(modifiedImage, format, file);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+        File file = fc.showSaveDialog(stage);
+        if (file == null) return;
+
+        try {
+            String format = file.getName().toLowerCase().endsWith(".jpg") ? "jpg" : "png";
+            ImageIO.write(modifiedImage, format, file);
+        } catch (IOException ex) {
+            ex.printStackTrace();
         }
     }
 
     private void toggleDarkMode() {
-        if (isDark) {
-            isDark = false;
-            guiStyleIcon.setImage(lightModeIcon);
-            Application.setUserAgentStylesheet(new PrimerLight().getUserAgentStylesheet());
-        }
-        else {
-            isDark = true;
-            guiStyleIcon.setImage(darkModeIcon);
-            Application.setUserAgentStylesheet(new PrimerDark().getUserAgentStylesheet());
-        }
-
+        isDark = !isDark;
+        guiStyleIcon.setImage(isDark ? darkIcon : lightIcon);
+        Application.setUserAgentStylesheet(
+                isDark ? new PrimerDark().getUserAgentStylesheet()
+                        : new PrimerLight().getUserAgentStylesheet()
+        );
     }
 
-    private Color pick_color() {
+    private void apply(java.util.function.Function<BufferedImage, BufferedImage> fn) {
+        modifiedImage = fn.apply(modifiedImage);
+        showModifiedImage.setSelected(true);
+        showModified();
+    }
 
-        return Color.blue;
+    private void showModified() {
+        imageViewer.setImage(SwingFXUtils.toFXImage(modifiedImage, null));
     }
 
     private void showAboutWindow() {
-        Dialog<String> dialog = new Dialog<>();
-        dialog.setTitle("About Us");
-        dialog.getDialogPane().getButtonTypes().add(ButtonType.OK);
-
-        Label label = new Label("This is a program called Clanker Painter 2.0" +
-                "\nYou can edit images, apply filters..." +
-                "\nDevelopers: Tomáš Vala, Lukáš Bíllý, Maxmilián Kolář");
-        label.setWrapText(true);
-        dialog.getDialogPane().setContent(label);
-
-        dialog.showAndWait();
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("About");
+        alert.setHeaderText("Clanker Painter 2.0");
+        /*alert.setContentText("""
+                You can edit images, apply filters...
+                Developers:
+                - Tomáš Vala
+                - Lukáš Bíllý
+                - Maxmilián Kolář
+                """);*/
+        alert.showAndWait();
     }
 
-    // Toggle between modified/original image
-    private void showModifiedImage() {
-        Image image = SwingFXUtils.toFXImage(modifiedImage, null);
-        imageViewer.setImage(image);
+
+    private void zoom(ScrollPane scrollPane, StackPane wrapper, double mouseX, double mouseY, double deltaY) {
+        double scaleFactor = (deltaY > 0) ? 1.1 : 0.9;
+
+        double oldScale = wrapper.getScaleX();
+        double newScale = oldScale * scaleFactor;
+
+        newScale = Math.max(0.1, Math.min(newScale, 10));
+
+        double mouseRelX = mouseX / scrollPane.getViewportBounds().getWidth();
+        double mouseRelY = mouseY / scrollPane.getViewportBounds().getHeight();
+
+        double contentWidth = wrapper.getBoundsInParent().getWidth();
+        double contentHeight = wrapper.getBoundsInParent().getHeight();
+
+        wrapper.setScaleX(newScale);
+        wrapper.setScaleY(newScale);
+
+        double newContentWidth = wrapper.getBoundsInParent().getWidth();
+        double newContentHeight = wrapper.getBoundsInParent().getHeight();
+
+        scrollPane.setHvalue((scrollPane.getHvalue() * (contentWidth - scrollPane.getViewportBounds().getWidth()) + mouseRelX * (newContentWidth - contentWidth))
+                / (newContentWidth - scrollPane.getViewportBounds().getWidth()));
+        scrollPane.setVvalue((scrollPane.getVvalue() * (contentHeight - scrollPane.getViewportBounds().getHeight()) + mouseRelY * (newContentHeight - contentHeight))
+                / (newContentHeight - scrollPane.getViewportBounds().getHeight()));
     }
 
-    private void showOriginalImage() {
-        imageViewer.setImage(originalImage);
-    }
-
-    private void zoom(double direction) {
-        double scale_factor = (direction > 0) ? 1.1 : 0.9;
-
-        imageViewer.setScaleX(imageViewer.getScaleX()*scale_factor);
-        imageViewer.setScaleY(imageViewer.getScaleY()*scale_factor);
-        imageViewer.setScaleZ(imageViewer.getScaleZ()*scale_factor);
-    }
-/*
-    publ ic static void main(String[] args) {
-        launch(args);
-    }
-*/
 }
