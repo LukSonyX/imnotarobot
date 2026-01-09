@@ -23,13 +23,16 @@ import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 
-public class Launcher extends Application {
+public class ApplicationController extends Application {
+    double scale_factor = 1;
+    boolean isOutOfBounds = false;
     boolean isDark;
     Image originalImage;
     BufferedImage modifiedImage;
@@ -46,12 +49,13 @@ public class Launcher extends Application {
     Image lightModeIcon = new Image(getClass().getResourceAsStream("lightmode.png"));
     ImageView guiStyleIcon;
 
-
     @Override
     public void start(Stage stage) {
         isDark = true;
 
         imageViewer = new ImageView();
+        imageViewer.fitWidthProperty().bind(stage.widthProperty());
+        imageViewer.fitHeightProperty().bind(stage.heightProperty());
         imageViewer.setPreserveRatio(true);
         imageViewer.setSmooth(true);
 
@@ -64,8 +68,6 @@ public class Launcher extends Application {
         // Adding group make ScrollPane work with scale
         Group yetAnotherWrapper = new Group(imageViewer);
 
-        MenuBar menuBar = new MenuBar();
-
         Button guiStyle = new Button();
         guiStyle.setGraphic(guiStyleIcon);
         guiStyle.setOnAction(e -> {
@@ -73,6 +75,7 @@ public class Launcher extends Application {
         });
 
         HBox menuWrap = new HBox();
+        MenuBar menuBar = new MenuBar();
 
         // Menus
         Menu fileMenu = new Menu("File");
@@ -152,9 +155,6 @@ public class Launcher extends Application {
         imageArea = new ScrollPane(imageAreaWrap);
         VBox sideBar = new VBox();
 
-        // Visual edit for root
-        root.setMinSize(800, 600);
-
         // Visual edit for imageArea
         imageArea.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         imageArea.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
@@ -174,6 +174,7 @@ public class Launcher extends Application {
         sideBar.setPadding(new Insets(10));
 
         // Fill the Screen!
+
         menuBar.getMenus().addAll(fileMenu, filterMenu, aboutMenu, exitMenu);
         menuWrap.getChildren().addAll(menuBar, guiStyle);
         HBox.setHgrow(menuBar, Priority.ALWAYS);
@@ -191,10 +192,11 @@ public class Launcher extends Application {
         Application.setUserAgentStylesheet(new PrimerDark().getUserAgentStylesheet());
 
         stage.setTitle("clanker painter 2.0");
+        stage.setMinHeight(300);
+        stage.setMinWidth(400);
         stage.setScene(scene);
         stage.show();
     }
-
     // Does what it says...
     private void onOpenImage(ImageView imageViewer) {
         FileChooser fileChooser = new FileChooser();
@@ -203,8 +205,8 @@ public class Launcher extends Application {
                 new FileChooser.ExtensionFilter("Obrázky", "*.png", "*.jpg", "*.jpeg", "*.bmp")
         );
 
-        //File file = fileChooser.showOpenDialog(null);
-        File file = new File("/home/zvonilka/Pictures/wallpapers/pixel.png");
+        File file = fileChooser.showOpenDialog(null);
+        //File file = new File("/home/zvonilka/Pictures/wallpapers/pixel.png");
         if (file != null) {
             try {
                 showOriginalImage.setDisable(false);
@@ -286,15 +288,21 @@ public class Launcher extends Application {
     }
 
     private void zoom(double direction) {
-        double scale_factor = (direction > 0) ? 1.1 : 0.9;
+        if (direction == 0) return;
 
-        imageViewer.setScaleX(imageViewer.getScaleX()*scale_factor);
-        imageViewer.setScaleY(imageViewer.getScaleY()*scale_factor);
-        imageViewer.setScaleZ(imageViewer.getScaleZ()*scale_factor);
+        double scaleFactorChange = (direction > 0) ? 1.1 : 0.9;
+        scale_factor *= scaleFactorChange;
+
+        double minScale = 0.1;
+        double maxScale = 5.0;
+
+        if (scale_factor < minScale) {
+            scale_factor = minScale;
+        } else if (scale_factor > maxScale) {
+            scale_factor = maxScale;
+        }
+
+        imageViewer.setScaleX(scale_factor);
+        imageViewer.setScaleY(scale_factor);
     }
-/*
-    publ ic static void main(String[] args) {
-        launch(args);
-    }
-*/
 }
