@@ -29,6 +29,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.Objects;
 
 public class ApplicationController extends Application {
     double scale_factor = 1;
@@ -36,6 +37,8 @@ public class ApplicationController extends Application {
     boolean isDark;
     Image originalImage;
     BufferedImage modifiedImage;
+    BufferedImage backupImage;
+    Button revertButton;
     MenuItem saveImageItem;
     ScrollPane imageArea;
     StackPane imageAreaWrap;
@@ -45,8 +48,8 @@ public class ApplicationController extends Application {
     ImageView imageViewer;
     Stage stage;
     Menu filterMenu;
-    Image darkModeIcon = new Image(getClass().getResourceAsStream("darkmode.png"));
-    Image lightModeIcon = new Image(getClass().getResourceAsStream("lightmode.png"));
+    Image darkModeIcon = new Image(Objects.requireNonNull(getClass().getResourceAsStream("darkmode.png")));
+    Image lightModeIcon = new Image(Objects.requireNonNull(getClass().getResourceAsStream("lightmode.png")));
     ImageView guiStyleIcon;
 
     @Override
@@ -110,6 +113,37 @@ public class ApplicationController extends Application {
             showModifiedImage();
         });
 
+        MenuItem contrastFilter = new MenuItem("Contrast");
+        contrastFilter.setOnAction(e -> {
+            modifiedImage = filters.contrast(modifiedImage, 1.5f);
+            showModifiedImage.setSelected(true);
+            showModifiedImage();
+        });
+
+        MenuItem boxBlurFilter = new MenuItem("Box Blur");
+        boxBlurFilter.setOnAction(e -> {
+            modifiedImage = filters.boxBlur(modifiedImage, 2);
+            showModifiedImage.setSelected(true);
+            showModifiedImage();
+        });
+
+        MenuItem thresholdFilter = new MenuItem("Threshold Filter");
+        thresholdFilter.setOnAction(e -> {
+            Double sliderValue = showSliderPopup("Threshold value", 0, 255);
+            if (sliderValue == null) return;
+
+            modifiedImage = filters.threshold(modifiedImage, sliderValue.intValue());
+            showModifiedImage.setSelected(true);
+            showModifiedImage();
+        });
+
+        MenuItem pixelateFilter = new MenuItem("Pixelate");
+        pixelateFilter.setOnAction(e -> {
+            modifiedImage = filters.pixelate(modifiedImage, 3);
+            showModifiedImage.setSelected(true);
+            showModifiedImage();
+        });
+
         MenuItem pixelSort = new MenuItem("sort pixels");
         pixelSort.setOnAction(e -> {
             modifiedImage = filters.brightness(modifiedImage, 5);
@@ -117,7 +151,7 @@ public class ApplicationController extends Application {
             showModifiedImage();
         });
 
-        filterMenu.getItems().addAll(grayscaleFilter, invertColors, pixelSort);
+        filterMenu.getItems().addAll(contrastFilter, grayscaleFilter, invertColors, pixelSort, thresholdFilter, boxBlurFilter, pixelateFilter);
         filterMenu.setDisable(true);
 
         // About menu
@@ -134,6 +168,12 @@ public class ApplicationController extends Application {
 
         // Sidebar fill
         shownImageGroup = new ToggleGroup();
+        revertButton = new Button("Revert");
+        revertButton.setOnAction(e -> {
+           modifiedImage = backupImage;
+           showModifiedImage();
+        });
+        revertButton.setDisable(true);
 
         // Modified / Original
         showOriginalImage = new RadioButton("Original Image");
@@ -178,7 +218,7 @@ public class ApplicationController extends Application {
         menuBar.getMenus().addAll(fileMenu, filterMenu, aboutMenu, exitMenu);
         menuWrap.getChildren().addAll(menuBar, guiStyle);
         HBox.setHgrow(menuBar, Priority.ALWAYS);
-        sideBar.getChildren().addAll(showOriginalImage, showModifiedImage);
+        sideBar.getChildren().addAll(showOriginalImage, showModifiedImage, revertButton);
 
         // Set the hierarchy
         root.setTop(menuWrap);
@@ -214,8 +254,10 @@ public class ApplicationController extends Application {
                 showModifiedImage.setDisable(false);
                 saveImageItem.setDisable(false);
                 filterMenu.setDisable(false);
+                revertButton.setDisable(false);
 
                 modifiedImage = ImageIO.read(file);
+                backupImage = modifiedImage;
                 originalImage = new Image(file.toURI().toString());
                 imageViewer.setImage(originalImage);
             } catch (IOException e) {
@@ -304,5 +346,37 @@ public class ApplicationController extends Application {
 
         imageViewer.setScaleX(scale_factor);
         imageViewer.setScaleY(scale_factor);
+    }
+
+    public Double showSliderPopup(String title, double min, double max) {
+        Dialog<Double> dialog = new Dialog<>();
+        dialog.setTitle(title);
+        dialog.setHeaderText("Adjust value");
+
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CLOSE);
+
+        Slider slider = new Slider();
+        slider.setMin(min);
+        slider.setMax(max);
+        slider.setShowTickLabels(true);
+        slider.setShowTickMarks(true);
+
+        VBox container = new VBox(10, slider);
+        container.setAlignment(Pos.CENTER);
+        container.setPrefWidth(300);
+
+        dialog.getDialogPane().setContent(container);
+
+        dialog.setResultConverter(buttonType -> {
+            if (buttonType == ButtonType.OK) {
+                return slider.getValue();
+            }
+            else if (buttonType == ButtonType.CLOSE) {
+                return null;
+            }
+            return null;
+        });
+
+        return dialog.showAndWait().orElse(null);
     }
 }
