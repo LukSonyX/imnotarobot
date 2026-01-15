@@ -5,7 +5,6 @@ import atlantafx.base.theme.PrimerLight;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.embed.swing.SwingFXUtils;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Group;
 import javafx.scene.Scene;
@@ -46,6 +45,7 @@ public class ApplicationController extends Application {
     RadioButton showModifiedImage;
     ImageView imageViewer;
     Stage stage;
+    int somerandom = 1;
     Menu filterMenu;
     Image darkModeIcon = new Image(Objects.requireNonNull(getClass().getResourceAsStream("darkmode.png")));
     Image lightModeIcon = new Image(Objects.requireNonNull(getClass().getResourceAsStream("lightmode.png")));
@@ -180,7 +180,43 @@ public class ApplicationController extends Application {
 
         // Sidebar fill
         shownImageGroup = new ToggleGroup();
-        revertButton = new Button("Revert");
+
+        Button generateVoronoiButton = new Button("Voronoi Image");
+        generateVoronoiButton.setOnAction(e -> {
+            try {
+                modifiedImage = VoronoiGenerator.generateVoronoi(12345L + somerandom);
+                originalImage = SwingFXUtils.toFXImage(modifiedImage, null);
+
+                somerandom++;
+                showOriginalImage();
+                backupImage = modifiedImage;
+                showOriginalImage.setDisable(false);
+                showOriginalImage.setSelected(true);
+                showModifiedImage.setDisable(false);
+                saveImageItem.setDisable(false);
+                filterMenu.setDisable(false);
+                revertButton.setDisable(false);
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
+        });
+
+        Button generateDSquareButton = new Button("Diamond Square");
+        generateDSquareButton.setOnAction(e -> {
+            modifiedImage = DiamondSquareGenerator.generateDiamondSquare(somerandom);
+            originalImage = SwingFXUtils.toFXImage(modifiedImage, null);
+            somerandom++;
+            showOriginalImage();
+            backupImage = modifiedImage;
+            showOriginalImage.setDisable(false);
+            showOriginalImage.setSelected(true);
+            showModifiedImage.setDisable(false);
+            saveImageItem.setDisable(false);
+            filterMenu.setDisable(false);
+            revertButton.setDisable(false);
+        });
+
+        revertButton = new Button("Revert Image");
         revertButton.setOnAction(e -> {
            modifiedImage = backupImage;
            showModifiedImage();
@@ -223,14 +259,13 @@ public class ApplicationController extends Application {
 
         // Visual edit for sideBar
         sideBar.setAlignment(Pos.CENTER);
-        sideBar.setPadding(new Insets(10));
+        sideBar.setSpacing(5);
 
         // Fill the Screen!
-
         menuBar.getMenus().addAll(fileMenu, filterMenu, aboutMenu, exitMenu);
         menuWrap.getChildren().addAll(menuBar, guiStyle);
         HBox.setHgrow(menuBar, Priority.ALWAYS);
-        sideBar.getChildren().addAll(showOriginalImage, showModifiedImage, revertButton);
+        sideBar.getChildren().addAll(showOriginalImage, showModifiedImage, revertButton, generateVoronoiButton, generateDSquareButton);
 
         // Set the hierarchy
         root.setTop(menuWrap);
