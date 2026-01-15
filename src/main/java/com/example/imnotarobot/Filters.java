@@ -4,6 +4,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.ConvolveOp;
 import java.awt.image.Kernel;
+import java.util.Arrays;
 
 public class Filters {
 
@@ -110,8 +111,7 @@ public class Filters {
         int size = radius * 2 + 1;
         float[] kernel = new float[size * size];
 
-        for (int i = 0; i < kernel.length; i++)
-            kernel[i] = 1f / kernel.length;
+        Arrays.fill(kernel, 1f / kernel.length);
 
         ConvolveOp op = new ConvolveOp(new Kernel(size, size, kernel), ConvolveOp.EDGE_NO_OP, null);
         return op.filter(src, null);

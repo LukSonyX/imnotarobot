@@ -33,7 +33,6 @@ import java.util.Objects;
 
 public class ApplicationController extends Application {
     double scale_factor = 1;
-    boolean isOutOfBounds = false;
     boolean isDark;
     Image originalImage;
     BufferedImage modifiedImage;
@@ -73,9 +72,7 @@ public class ApplicationController extends Application {
 
         Button guiStyle = new Button();
         guiStyle.setGraphic(guiStyleIcon);
-        guiStyle.setOnAction(e -> {
-            toggleDarkMode();
-        });
+        guiStyle.setOnAction(e -> toggleDarkMode());
 
         HBox menuWrap = new HBox();
         MenuBar menuBar = new MenuBar();
@@ -96,33 +93,33 @@ public class ApplicationController extends Application {
 
         fileMenu.getItems().addAll(loadImageItem, saveImageItem);
 
-        // Filter menu WIP
-        Filters filters = new Filters();
-
         MenuItem grayscaleFilter = new MenuItem("Grayscale Filter");
         grayscaleFilter.setOnAction(e -> {
-            modifiedImage = filters.grayscale(modifiedImage);
+            modifiedImage = Filters.grayscale(modifiedImage);
             showModifiedImage.setSelected(true);
             showModifiedImage();
         });
 
         MenuItem invertColors = new MenuItem("Invert colors");
         invertColors.setOnAction(e -> {
-            modifiedImage = filters.invert(modifiedImage);
+            modifiedImage = Filters.invert(modifiedImage);
             showModifiedImage.setSelected(true);
             showModifiedImage();
         });
 
         MenuItem contrastFilter = new MenuItem("Contrast");
         contrastFilter.setOnAction(e -> {
-            modifiedImage = filters.contrast(modifiedImage, 1.5f);
+            modifiedImage = Filters.contrast(modifiedImage, 1.5f);
             showModifiedImage.setSelected(true);
             showModifiedImage();
         });
 
         MenuItem boxBlurFilter = new MenuItem("Box Blur");
         boxBlurFilter.setOnAction(e -> {
-            modifiedImage = filters.boxBlur(modifiedImage, 2);
+            Double sliderValue = showSliderPopup("Brightness value", 0, 100);
+            if (sliderValue == null) return;
+
+            modifiedImage = Filters.boxBlur(modifiedImage, sliderValue.intValue());
             showModifiedImage.setSelected(true);
             showModifiedImage();
         });
@@ -132,37 +129,52 @@ public class ApplicationController extends Application {
             Double sliderValue = showSliderPopup("Threshold value", 0, 255);
             if (sliderValue == null) return;
 
-            modifiedImage = filters.threshold(modifiedImage, sliderValue.intValue());
+            modifiedImage = Filters.threshold(modifiedImage, sliderValue.intValue());
+            showModifiedImage.setSelected(true);
+            showModifiedImage();
+        });
+
+        MenuItem edgerDetector = new MenuItem("Edge Detector");
+        edgerDetector.setOnAction(e -> {
+            modifiedImage = Filters.edgeDetect(modifiedImage);
+            showModifiedImage.setSelected(true);
+            showModifiedImage();
+        });
+
+        MenuItem sharpenFilter = new MenuItem("Sharpen");
+        edgerDetector.setOnAction(e -> {
+            modifiedImage = Filters.sharpen(modifiedImage);
             showModifiedImage.setSelected(true);
             showModifiedImage();
         });
 
         MenuItem pixelateFilter = new MenuItem("Pixelate");
         pixelateFilter.setOnAction(e -> {
-            modifiedImage = filters.pixelate(modifiedImage, 3);
+            modifiedImage = Filters.pixelate(modifiedImage, 3);
             showModifiedImage.setSelected(true);
             showModifiedImage();
         });
 
-        MenuItem pixelSort = new MenuItem("sort pixels");
-        pixelSort.setOnAction(e -> {
-            modifiedImage = filters.brightness(modifiedImage, 5);
+        MenuItem brightnessFilter = new MenuItem("Brightness Filter");
+        brightnessFilter.setOnAction(e -> {
+            Double sliderValue = showSliderPopup("Brightness value", -100, 100);
+            if (sliderValue == null) return;
+
+            modifiedImage = Filters.brightness(modifiedImage, sliderValue.intValue());
             showModifiedImage.setSelected(true);
             showModifiedImage();
         });
 
-        filterMenu.getItems().addAll(contrastFilter, grayscaleFilter, invertColors, pixelSort, thresholdFilter, boxBlurFilter, pixelateFilter);
+        filterMenu.getItems().addAll(contrastFilter, grayscaleFilter, invertColors, brightnessFilter, thresholdFilter, boxBlurFilter, pixelateFilter, sharpenFilter, edgerDetector);
         filterMenu.setDisable(true);
 
         // About menu
         MenuItem aboutItem = new MenuItem("About");
-        aboutItem.setOnAction(e -> {
-            showAboutWindow();
-        });
+        aboutItem.setOnAction(e -> showAboutWindow());
         aboutMenu.getItems().add(aboutItem);
 
         // Exit menu
-        MenuItem exitItem = new MenuItem("Exit");
+        MenuItem exitItem = new MenuItem("Click again to proceed.");
         exitItem.setOnAction(e -> Platform.exit());
         exitMenu.getItems().add(exitItem);
 
@@ -225,10 +237,9 @@ public class ApplicationController extends Application {
         root.setCenter(imageArea);
         root.setRight(sideBar);
 
-        // Some scene BS
         Scene scene = new Scene(root, 800, 600);
 
-        // Dark Mode... Light Mode may be implemented in future
+        // Dark Mode
         Application.setUserAgentStylesheet(new PrimerDark().getUserAgentStylesheet());
 
         stage.setTitle("clanker painter 2.0");
@@ -249,20 +260,20 @@ public class ApplicationController extends Application {
         //File file = new File("/home/zvonilka/Pictures/wallpapers/pixel.png");
         if (file != null) {
             try {
-                showOriginalImage.setDisable(false);
-                showOriginalImage.setSelected(true);
-                showModifiedImage.setDisable(false);
-                saveImageItem.setDisable(false);
-                filterMenu.setDisable(false);
-                revertButton.setDisable(false);
-
                 modifiedImage = ImageIO.read(file);
-                backupImage = modifiedImage;
                 originalImage = new Image(file.toURI().toString());
                 imageViewer.setImage(originalImage);
             } catch (IOException e) {
                 e.printStackTrace();
             }
+
+            backupImage = modifiedImage;
+            showOriginalImage.setDisable(false);
+            showOriginalImage.setSelected(true);
+            showModifiedImage.setDisable(false);
+            saveImageItem.setDisable(false);
+            filterMenu.setDisable(false);
+            revertButton.setDisable(false);
         }
     }
 
@@ -298,11 +309,6 @@ public class ApplicationController extends Application {
             Application.setUserAgentStylesheet(new PrimerDark().getUserAgentStylesheet());
         }
 
-    }
-
-    private Color pick_color() {
-
-        return Color.blue;
     }
 
     private void showAboutWindow() {
